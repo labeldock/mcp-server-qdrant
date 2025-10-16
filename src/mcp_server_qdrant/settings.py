@@ -14,6 +14,16 @@ DEFAULT_TOOL_FIND_DESCRIPTION = (
     " - Access memories for further analysis \n"
     " - Get some personal information about the user"
 )
+DEFAULT_TOOL_UPDATE_DESCRIPTION = (
+    "Update an existing memory in Qdrant by its ID. Use this tool when you need to modify stored information."
+)
+DEFAULT_TOOL_DELETE_DESCRIPTION = (
+    "Delete memories from Qdrant by their IDs. Use this tool when you need to remove specific stored information."
+)
+DEFAULT_TOOL_DELETE_BY_FILTER_DESCRIPTION = (
+    "Delete memories from Qdrant that match specific filter conditions. "
+    "Use this tool when you need to remove multiple memories based on metadata criteria."
+)
 
 METADATA_PATH = "metadata"
 
@@ -30,6 +40,18 @@ class ToolSettings(BaseSettings):
     tool_find_description: str = Field(
         default=DEFAULT_TOOL_FIND_DESCRIPTION,
         validation_alias="TOOL_FIND_DESCRIPTION",
+    )
+    tool_update_description: str = Field(
+        default=DEFAULT_TOOL_UPDATE_DESCRIPTION,
+        validation_alias="TOOL_UPDATE_DESCRIPTION",
+    )
+    tool_delete_description: str = Field(
+        default=DEFAULT_TOOL_DELETE_DESCRIPTION,
+        validation_alias="TOOL_DELETE_DESCRIPTION",
+    )
+    tool_delete_by_filter_description: str = Field(
+        default=DEFAULT_TOOL_DELETE_BY_FILTER_DESCRIPTION,
+        validation_alias="TOOL_DELETE_BY_FILTER_DESCRIPTION",
     )
 
 

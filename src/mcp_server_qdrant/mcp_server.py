@@ -197,3 +197,142 @@ class QdrantMCPServer(FastMCP):
                 name="qdrant-store",
                 description=self.tool_settings.tool_store_description,
             )
+
+            # Register update tool
+            async def update(
+                ctx: Context,
+                point_id: Annotated[str, Field(description="ID of the point to update")],
+                information: Annotated[str, Field(description="New text content")],
+                collection_name: Annotated[
+                    str, Field(description="The collection containing the point")
+                ],
+                metadata: Annotated[
+                    Metadata | None,
+                    Field(
+                        description="New metadata to store with the information. Any json is accepted."
+                    ),
+                ] = None,
+            ) -> str:
+                """
+                Update an existing point in Qdrant.
+                :param ctx: The context for the request.
+                :param point_id: The ID of the point to update.
+                :param information: The new information to store.
+                :param metadata: New JSON metadata to store with the information, optional.
+                :param collection_name: The name of the collection containing the point.
+                :return: A message indicating the result of the update.
+                """
+                await ctx.debug(f"Updating point {point_id} in Qdrant")
+
+                entry = Entry(content=information, metadata=metadata)
+                success = await self.qdrant_connector.update(
+                    point_id, entry, collection_name=collection_name
+                )
+                
+                if success:
+                    if collection_name:
+                        return f"Updated point {point_id} in collection {collection_name}"
+                    return f"Updated point {point_id}"
+                else:
+                    return f"Failed to update point {point_id}: point or collection not found"
+
+            # Register delete tool
+            async def delete(
+                ctx: Context,
+                point_ids: Annotated[
+                    list[str], Field(description="List of point IDs to delete")
+                ],
+                collection_name: Annotated[
+                    str, Field(description="The collection to delete from")
+                ],
+            ) -> str:
+                """
+                Delete points from Qdrant by their IDs.
+                :param ctx: The context for the request.
+                :param point_ids: The list of point IDs to delete.
+                :param collection_name: The name of the collection to delete from.
+                :return: A message indicating the result of the deletion.
+                """
+                await ctx.debug(f"Deleting points {point_ids} from Qdrant")
+
+                count = await self.qdrant_connector.delete(
+                    point_ids, collection_name=collection_name
+                )
+                
+                if collection_name:
+                    return f"Deleted {count} point(s) from collection {collection_name}"
+                return f"Deleted {count} point(s)"
+
+            # Register delete by filter tool
+            async def delete_by_filter(
+                ctx: Context,
+                collection_name: Annotated[
+                    str, Field(description="The collection to delete from")
+                ],
+                query_filter: ArbitraryFilter,
+            ) -> str:
+                """
+                Delete points from Qdrant that match a filter condition.
+                :param ctx: The context for the request.
+                :param collection_name: The name of the collection to delete from.
+                :param query_filter: The filter to apply for deletion.
+                :return: A message indicating the result of the deletion.
+                """
+                await ctx.debug(f"Deleting points by filter from Qdrant: {query_filter}")
+
+                filter_condition = models.Filter(**query_filter) if query_filter else None
+                if not filter_condition:
+                    return "Cannot delete without a filter condition"
+
+                success = await self.qdrant_connector.delete_by_filter(
+                    filter_condition, collection_name=collection_name
+                )
+                
+                if success:
+                    if collection_name:
+                        return f"Deleted points matching filter from collection {collection_name}"
+                    return "Deleted points matching filter"
+                else:
+                    return "Failed to delete points: collection not found"
+
+            update_foo = update
+            delete_foo = delete
+            delete_by_filter_foo = delete_by_filter
+
+            if self.qdrant_settings.collection_name:
+                update_foo = make_partial_function(
+                    update_foo, {"collection_name": self.qdrant_settings.collection_name}
+                )
+                delete_foo = make_partial_function(
+                    delete_foo, {"collection_name": self.qdrant_settings.collection_name}
+                )
+                delete_by_filter_foo = make_partial_function(
+                    delete_by_filter_foo, {"collection_name": self.qdrant_settings.collection_name}
+                )
+
+            # Apply filterable conditions to delete_by_filter if configured
+            if len(filterable_conditions) > 0:
+                delete_by_filter_foo = wrap_filters(delete_by_filter_foo, filterable_conditions)
+            elif not self.qdrant_settings.allow_arbitrary_filter:
+                # If no arbitrary filters allowed, don't register delete_by_filter
+                delete_by_filter_foo = None
+
+            self.tool(
+                update_foo,
+                name="qdrant-update",
+                description=self.tool_settings.tool_update_description,
+            )
+
+            self.tool(
+                delete_foo,
+                name="qdrant-delete",
+                description=self.tool_settings.tool_delete_description,
+            )
+
+            if delete_by_filter_foo is not None:
+                self.tool(
+                    delete_by_filter_foo,
+                    name="qdrant-delete-by-filter",
+                    description=self.tool_settings.tool_delete_by_filter_description,
+                )
+

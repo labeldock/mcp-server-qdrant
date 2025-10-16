@@ -137,6 +137,98 @@ class QdrantConnector:
             for result in search_results.points
         ]
 
+    async def update(
+        self,
+        point_id: str,
+        entry: Entry,
+        *,
+        collection_name: str | None = None,
+    ) -> bool:
+        """
+        Update an existing point in the Qdrant collection.
+        :param point_id: The ID of the point to update.
+        :param entry: The new entry data to update the point with.
+        :param collection_name: The name of the collection, optional. If not provided,
+                                the default collection is used.
+        :return: True if the update was successful, False if the point was not found.
+        """
+        collection_name = collection_name or self._default_collection_name
+        assert collection_name is not None
+        
+        collection_exists = await self._client.collection_exists(collection_name)
+        if not collection_exists:
+            return False
+
+        # Embed the new document
+        embeddings = await self._embedding_provider.embed_documents([entry.content])
+        vector_name = self._embedding_provider.get_vector_name()
+        payload = {"document": entry.content, METADATA_PATH: entry.metadata}
+
+        # Update the point
+        await self._client.upsert(
+            collection_name=collection_name,
+            points=[
+                models.PointStruct(
+                    id=point_id,
+                    vector={vector_name: embeddings[0]},
+                    payload=payload,
+                )
+            ],
+        )
+        return True
+
+    async def delete(
+        self,
+        point_ids: list[str],
+        *,
+        collection_name: str | None = None,
+    ) -> int:
+        """
+        Delete points by their IDs from the Qdrant collection.
+        :param point_ids: The list of point IDs to delete.
+        :param collection_name: The name of the collection, optional. If not provided,
+                                the default collection is used.
+        :return: The number of points deleted.
+        """
+        collection_name = collection_name or self._default_collection_name
+        assert collection_name is not None
+        
+        collection_exists = await self._client.collection_exists(collection_name)
+        if not collection_exists:
+            return 0
+
+        await self._client.delete(
+            collection_name=collection_name,
+            points_selector=models.PointIdsList(points=point_ids),
+        )
+        return len(point_ids)
+
+    async def delete_by_filter(
+        self,
+        filter_condition: models.Filter,
+        *,
+        collection_name: str | None = None,
+    ) -> bool:
+        """
+        Delete points that match a filter condition from the Qdrant collection.
+        :param filter_condition: The filter condition to match points for deletion.
+        :param collection_name: The name of the collection, optional. If not provided,
+                                the default collection is used.
+        :return: True if the deletion was successful.
+        """
+        collection_name = collection_name or self._default_collection_name
+        assert collection_name is not None
+        
+        collection_exists = await self._client.collection_exists(collection_name)
+        if not collection_exists:
+            return False
+
+        await self._client.delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(filter=filter_condition),
+        )
+        return True
+
     async def _ensure_collection_exists(self, collection_name: str):
         """
         Ensure that the collection exists, creating it if necessary.

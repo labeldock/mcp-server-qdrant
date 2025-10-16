@@ -30,24 +30,55 @@ It acts as a semantic memory layer on top of the Qdrant database.
    - Retrieve relevant information from the Qdrant database
    - Input:
      - `query` (string): Query to use for searching
-     - `collection_name` (string): Name of the collection to store the information in. This field is required if there are no default collection name.
+     - `collection_name` (string): Name of the collection to search in. This field is required if there are no default collection name.
                                    If there is a default collection name, this field is not enabled.
    - Returns: Information stored in the Qdrant database as separate messages
+3. `qdrant-update`
+   - Update an existing memory in Qdrant by its ID
+   - Input:
+     - `point_id` (string): ID of the point to update
+     - `information` (string): New text content
+     - `metadata` (JSON): Optional new metadata to store
+     - `collection_name` (string): Name of the collection containing the point. This field is required if there are no default collection name.
+                                   If there is a default collection name, this field is not enabled.
+   - Returns: Confirmation message
+4. `qdrant-delete`
+   - Delete memories from Qdrant by their IDs
+   - Input:
+     - `point_ids` (array of strings): List of point IDs to delete
+     - `collection_name` (string): Name of the collection to delete from. This field is required if there are no default collection name.
+                                   If there is a default collection name, this field is not enabled.
+   - Returns: Confirmation message with the number of deleted points
+5. `qdrant-delete-by-filter`
+   - Delete memories from Qdrant that match specific filter conditions
+   - Input:
+     - `query_filter` (JSON): Filter conditions to match points for deletion
+     - `collection_name` (string): Name of the collection to delete from. This field is required if there are no default collection name.
+                                   If there is a default collection name, this field is not enabled.
+   - Returns: Confirmation message
+   - Note: This tool is only available when `QDRANT_ALLOW_ARBITRARY_FILTER` is enabled or filterable fields are configured.
+
+**Note:** Update and delete tools are only available when `QDRANT_READ_ONLY` is set to `false` (default).
 
 ## Environment Variables
 
 The configuration of the server is done using environment variables:
 
-| Name                     | Description                                                         | Default Value                                                     |
-|--------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
-| `QDRANT_URL`             | URL of the Qdrant server                                            | None                                                              |
-| `QDRANT_API_KEY`         | API key for the Qdrant server                                       | None                                                              |
-| `COLLECTION_NAME`        | Name of the default collection to use.                              | None                                                              |
-| `QDRANT_LOCAL_PATH`      | Path to the local Qdrant database (alternative to `QDRANT_URL`)     | None                                                              |
-| `EMBEDDING_PROVIDER`     | Embedding provider to use (currently only "fastembed" is supported) | `fastembed`                                                       |
-| `EMBEDDING_MODEL`        | Name of the embedding model to use                                  | `sentence-transformers/all-MiniLM-L6-v2`                          |
-| `TOOL_STORE_DESCRIPTION` | Custom description for the store tool                               | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
-| `TOOL_FIND_DESCRIPTION`  | Custom description for the find tool                                | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+| Name                                  | Description                                                         | Default Value                                                     |
+|---------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
+| `QDRANT_URL`                          | URL of the Qdrant server                                            | None                                                              |
+| `QDRANT_API_KEY`                      | API key for the Qdrant server                                       | None                                                              |
+| `COLLECTION_NAME`                     | Name of the default collection to use.                              | None                                                              |
+| `QDRANT_LOCAL_PATH`                   | Path to the local Qdrant database (alternative to `QDRANT_URL`)     | None                                                              |
+| `QDRANT_READ_ONLY`                    | Enable read-only mode (disables store, update, and delete tools)    | `false`                                                           |
+| `QDRANT_ALLOW_ARBITRARY_FILTER`       | Allow arbitrary filter conditions in queries                        | `false`                                                           |
+| `EMBEDDING_PROVIDER`                  | Embedding provider to use (currently only "fastembed" is supported) | `fastembed`                                                       |
+| `EMBEDDING_MODEL`                     | Name of the embedding model to use                                  | `sentence-transformers/all-MiniLM-L6-v2`                          |
+| `TOOL_STORE_DESCRIPTION`              | Custom description for the store tool                               | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+| `TOOL_FIND_DESCRIPTION`               | Custom description for the find tool                                | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+| `TOOL_UPDATE_DESCRIPTION`             | Custom description for the update tool                              | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+| `TOOL_DELETE_DESCRIPTION`             | Custom description for the delete tool                              | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
+| `TOOL_DELETE_BY_FILTER_DESCRIPTION`   | Custom description for the delete by filter tool                    | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
 
 Note: You cannot provide both `QDRANT_URL` and `QDRANT_LOCAL_PATH` at the same time.
 
@@ -113,7 +144,22 @@ uvx mcp-server-qdrant --transport sse
 
 ### Using Docker
 
-A Dockerfile is available for building and running the MCP server:
+Pre-built Docker images are available from GitHub Container Registry:
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/labeldock/mcp-server-qdrant:latest
+
+# Run the container
+docker run -p 8000:8000 \
+  -e FASTMCP_HOST="0.0.0.0" \
+  -e QDRANT_URL="http://your-qdrant-server:6333" \
+  -e QDRANT_API_KEY="your-api-key" \
+  -e COLLECTION_NAME="your-collection" \
+  ghcr.io/labeldock/mcp-server-qdrant:latest
+```
+
+Alternatively, you can build the image locally:
 
 ```bash
 # Build the container
