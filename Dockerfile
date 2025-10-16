@@ -16,6 +16,11 @@ ENV QDRANT_URL=""
 ENV QDRANT_API_KEY=""
 ENV COLLECTION_NAME="default-collection"
 ENV EMBEDDING_MODEL="sentence-transformers/all-MiniLM-L6-v2"
+ENV QDRANT_READ_ONLY="false"
 
-# Run the server with StreamableHTTP transport
+# FastMCP settings - required for StreamableHTTP
+ENV FASTMCP_HOST="0.0.0.0"
+ENV FASTMCP_PORT="8000"
+
+# Run the server with StreamableHTTP transport (required for Lobe Chat)
 CMD uvx mcp-server-qdrant --transport streamable-http
