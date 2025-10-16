@@ -253,23 +253,18 @@ Use this when you need to find existing code snippets for reuse or reference." \
 uvx mcp-server-qdrant --transport streamable-http # Enable StreamableHTTP transport
 ```
 
-In Cursor/Windsurf/Lobe Chat, you can then configure the MCP server in your settings by pointing to this running server using
+In Cursor/Windsurf, you can then configure the MCP server in your settings by pointing to this running server using
 StreamableHTTP transport protocol. The description on how to add an MCP server to Cursor can be found in the [Cursor
 documentation](https://docs.cursor.com/context/model-context-protocol#adding-an-mcp-server-to-cursor). If you are
-running locally, you can use the following URL:
+running Cursor/Windsurf locally, you can use the following URL:
 
 ```
 http://localhost:8000/mcp
 ```
 
-For Lobe Chat, configure the MCP server URL in the plugin settings:
-```
-https://your-railway-app.railway.app/mcp
-```
-
 > [!TIP]
-> StreamableHTTP transport is required for Lobe Chat and provides better performance than SSE. 
-> The `/mcp` endpoint will be available once the server starts.
+> We suggest StreamableHTTP transport as a preferred way to connect Cursor/Windsurf to the MCP server, as it can support remote
+> connections and provides better performance than SSE. That makes it easy to share the server with your team or use it in a cloud environment.
 
 This configuration transforms the Qdrant MCP server into a specialized code search tool that can:
 
