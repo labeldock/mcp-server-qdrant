@@ -2,15 +2,12 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Install uv for package management
-RUN pip install --no-cache-dir uv
-
-# Copy the local source code
-COPY pyproject.toml ./
+# Copy the local source code and metadata
+COPY pyproject.toml README.md ./
 COPY src ./src
 
 # Install from local source code (includes update/delete features)
-RUN uv pip install --system --no-cache-dir .
+RUN pip install --no-cache-dir .
 
 # Expose the default port for StreamableHTTP transport
 EXPOSE 8000
