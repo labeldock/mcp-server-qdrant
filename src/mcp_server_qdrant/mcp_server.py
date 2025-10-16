@@ -82,8 +82,9 @@ class QdrantMCPServer(FastMCP):
         """
         Feel free to override this method in your subclass to customize the format of the entry.
         """
+        entry_id = f"<id>{entry.id}</id>" if entry.id else ""
         entry_metadata = json.dumps(entry.metadata) if entry.metadata else ""
-        return f"<entry><content>{entry.content}</content><metadata>{entry_metadata}</metadata></entry>"
+        return f"<entry>{entry_id}<content>{entry.content}</content><metadata>{entry_metadata}</metadata></entry>"
 
     def setup_tools(self):
         """

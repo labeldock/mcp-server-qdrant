@@ -19,6 +19,7 @@ class Entry(BaseModel):
     A single entry in the Qdrant collection.
     """
 
+    id: str | None = None
     content: str
     metadata: Metadata | None = None
 
@@ -131,6 +132,7 @@ class QdrantConnector:
 
         return [
             Entry(
+                id=str(result.id),
                 content=result.payload["document"],
                 metadata=result.payload.get("metadata"),
             )
