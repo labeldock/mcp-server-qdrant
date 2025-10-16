@@ -5,8 +5,12 @@ WORKDIR /app
 # Install uv for package management
 RUN pip install --no-cache-dir uv
 
-# Install the mcp-server-qdrant package
-RUN uv pip install --system --no-cache-dir mcp-server-qdrant
+# Copy the local source code
+COPY pyproject.toml ./
+COPY src ./src
+
+# Install from local source code (includes update/delete features)
+RUN uv pip install --system --no-cache-dir .
 
 # Expose the default port for StreamableHTTP transport
 EXPOSE 8000
@@ -23,4 +27,4 @@ ENV FASTMCP_HOST="0.0.0.0"
 ENV FASTMCP_PORT="8000"
 
 # Run the server with StreamableHTTP transport (required for Lobe Chat)
-CMD uvx mcp-server-qdrant --transport streamable-http
+CMD ["mcp-server-qdrant", "--transport", "streamable-http"]
