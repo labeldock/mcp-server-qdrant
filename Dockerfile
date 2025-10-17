@@ -9,6 +9,9 @@ COPY src ./src
 # Install from local source code (includes update/delete features)
 RUN pip install --no-cache-dir .
 
+# Pre-download embedding model to avoid cold start delays
+RUN python -c "from fastembed import TextEmbedding; TextEmbedding(model_name='sentence-transformers/all-MiniLM-L6-v2')"
+
 # Expose the default port for StreamableHTTP transport
 EXPOSE 8000
 
