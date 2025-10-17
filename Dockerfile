@@ -23,9 +23,10 @@ ENV QDRANT_READ_ONLY="false"
 ENV FASTMCP_HOST="0.0.0.0"
 ENV FASTMCP_PORT="8000"
 
-# Health check to ensure server is ready
+# Health check - try root endpoint first, fallback to mcp endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" || exit 1
+  CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/').read()" || \
+      python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/mcp').read()" || exit 1
 
 # Run the server with StreamableHTTP transport (required for Lobe Chat)
 CMD ["mcp-server-qdrant", "--transport", "streamable-http"]
