@@ -2,6 +2,21 @@
 
 [![smithery badge](https://smithery.ai/badge/mcp-server-qdrant)](https://smithery.ai/protocol/mcp-server-qdrant)
 
+> [!IMPORTANT]
+> **Fork notice — this is an independent hard fork.**
+> This project began as a fork of [`qdrant/mcp-server-qdrant`](https://github.com/qdrant/mcp-server-qdrant)
+> but has since **diverged into an independently maintained product**. It **no longer tracks upstream**:
+> changes are made directly here, and upstream releases are not merged.
+>
+> What this fork adds on top of upstream:
+> - **Write tools beyond store/find**: `qdrant-update`, `qdrant-delete`, and `qdrant-delete-by-filter`
+>   (point IDs are surfaced in search results so they can be updated/deleted).
+> - **`/health` endpoint** (via `custom_route`) for container/serverless health checks, plus a Docker `HEALTHCHECK`.
+> - **StreamableHTTP-first deployment**: Docker image runs `--transport streamable-http` by default (e.g. for Lobe Chat).
+> - **Container publishing**: multi-arch image built and pushed to GitHub Container Registry (`ghcr.io`) on every push/tag.
+> - **Pre-downloaded embedding model** baked into the image to eliminate cold-start latency.
+> - **Modernized dependencies**: `fastmcp>=2.14.7,<3`, `qdrant-client>=1.18`, `fastembed>=0.8`, `pydantic>=2.11`.
+
 > The [Model Context Protocol (MCP)](https://modelcontextprotocol.io/introduction) is an open protocol that enables
 > seamless integration between LLM applications and external data sources and tools. Whether you're building an
 > AI-powered IDE, enhancing a chat interface, or creating custom AI workflows, MCP provides a standardized way to
