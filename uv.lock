@@ -1280,7 +1280,7 @@ wheels = [
 
 [[package]]
 name = "mcp-server-qdrant"
-version = "0.8.1"
+version = "2607.4.0"
 source = { editable = "." }
 dependencies = [
     { name = "fastembed" },

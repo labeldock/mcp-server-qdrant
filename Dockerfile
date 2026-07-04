@@ -32,6 +32,10 @@ ENV MCP_PASSWORD=""
 ENV FASTMCP_HOST="0.0.0.0"
 ENV FASTMCP_PORT="8000"
 
+# Unbuffer stdout/stderr so the startup collection/permission summary and other
+# logs appear immediately in container/serverless logs.
+ENV PYTHONUNBUFFERED=1
+
 # Health check - use the custom health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()" || exit 1
