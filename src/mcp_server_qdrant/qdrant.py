@@ -156,7 +156,7 @@ class QdrantConnector:
         """
         collection_name = collection_name or self._default_collection_name
         assert collection_name is not None
-        
+
         collection_exists = await self._client.collection_exists(collection_name)
         if not collection_exists:
             return False
@@ -194,7 +194,7 @@ class QdrantConnector:
         """
         collection_name = collection_name or self._default_collection_name
         assert collection_name is not None
-        
+
         collection_exists = await self._client.collection_exists(collection_name)
         if not collection_exists:
             return 0
@@ -220,7 +220,7 @@ class QdrantConnector:
         """
         collection_name = collection_name or self._default_collection_name
         assert collection_name is not None
-        
+
         collection_exists = await self._client.collection_exists(collection_name)
         if not collection_exists:
             return False

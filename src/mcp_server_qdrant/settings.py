@@ -3,6 +3,10 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 from pydantic_settings import BaseSettings
 
+from mcp_server_qdrant.common.permissions import (
+    CollectionAccess,
+    parse_collection_directives,
+)
 from mcp_server_qdrant.embeddings.types import EmbeddingProviderType
 
 DEFAULT_TOOL_STORE_DESCRIPTION = (
@@ -14,12 +18,8 @@ DEFAULT_TOOL_FIND_DESCRIPTION = (
     " - Access memories for further analysis \n"
     " - Get some personal information about the user"
 )
-DEFAULT_TOOL_UPDATE_DESCRIPTION = (
-    "Update an existing memory in Qdrant by its ID. Use this tool when you need to modify stored information."
-)
-DEFAULT_TOOL_DELETE_DESCRIPTION = (
-    "Delete memories from Qdrant by their IDs. Use this tool when you need to remove specific stored information."
-)
+DEFAULT_TOOL_UPDATE_DESCRIPTION = "Update an existing memory in Qdrant by its ID. Use this tool when you need to modify stored information."
+DEFAULT_TOOL_DELETE_DESCRIPTION = "Delete memories from Qdrant by their IDs. Use this tool when you need to remove specific stored information."
 DEFAULT_TOOL_DELETE_BY_FILTER_DESCRIPTION = (
     "Delete memories from Qdrant that match specific filter conditions. "
     "Use this tool when you need to remove multiple memories based on metadata criteria."
@@ -107,6 +107,11 @@ class QdrantSettings(BaseSettings):
     search_limit: int = Field(default=10, validation_alias="QDRANT_SEARCH_LIMIT")
     read_only: bool = Field(default=False, validation_alias="QDRANT_READ_ONLY")
 
+    # Shared-secret gate for the MCP endpoint. When set, clients must send
+    # ``Authorization: Bearer <MCP_PASSWORD>``; unauthenticated clients cannot even
+    # list tools (and therefore cannot read tool descriptions). Empty means open.
+    mcp_password: str | None = Field(default=None, validation_alias="MCP_PASSWORD")
+
     filterable_fields: list[FilterableField] | None = Field(default=None)
 
     allow_arbitrary_filter: bool = Field(
@@ -126,6 +131,29 @@ class QdrantSettings(BaseSettings):
             for field in self.filterable_fields
             if field.condition is not None
         }
+
+    def collection_access(self) -> dict[str, "CollectionAccess"]:
+        """
+        Parse ``COLLECTION_NAME`` into an ordered map of collection name -> access.
+
+        Empty when ``COLLECTION_NAME`` is unset, which the server treats as the
+        legacy "no whitelist" mode (any collection, tools gated only by
+        ``QDRANT_READ_ONLY``).
+        """
+        return parse_collection_directives(
+            self.collection_name, read_only=self.read_only
+        )
+
+    def default_collection_name(self) -> str | None:
+        """
+        The single served collection name when exactly one is configured, else
+        ``None`` (multiple collections => the tool ``collection_name`` argument is
+        required and validated against the whitelist).
+        """
+        access = self.collection_access()
+        if len(access) == 1:
+            return next(iter(access))
+        return None
 
     @model_validator(mode="after")
     def check_local_path_conflict(self) -> "QdrantSettings":

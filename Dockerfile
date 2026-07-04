@@ -18,9 +18,15 @@ EXPOSE 8000
 # Set environment variables with defaults that can be overridden at runtime
 ENV QDRANT_URL=""
 ENV QDRANT_API_KEY=""
+# COLLECTION_NAME accepts a whitespace-separated list of "name[:perms]" directives,
+# e.g. "travel:ro place:rw pin:rwd". perms are any of r/w/d; no suffix means full
+# access (rwd). A single bare name keeps the classic default-collection behaviour.
 ENV COLLECTION_NAME="default-collection"
 ENV EMBEDDING_MODEL="sentence-transformers/all-MiniLM-L6-v2"
 ENV QDRANT_READ_ONLY="false"
+# Shared-secret gate. When non-empty, clients must send
+# "Authorization: Bearer <MCP_PASSWORD>"; the /health route stays public.
+ENV MCP_PASSWORD=""
 
 # FastMCP settings - required for StreamableHTTP
 ENV FASTMCP_HOST="0.0.0.0"

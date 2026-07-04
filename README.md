@@ -73,7 +73,10 @@ It acts as a semantic memory layer on top of the Qdrant database.
    - Returns: Confirmation message
    - Note: This tool is only available when `QDRANT_ALLOW_ARBITRARY_FILTER` is enabled or filterable fields are configured.
 
-**Note:** Update and delete tools are only available when `QDRANT_READ_ONLY` is set to `false` (default).
+**Note:** Which tools are exposed depends on the permissions granted to the served
+collections — see [Collection access control](#collection-access-control). Write tools
+(`store`, `update`) require `w`; delete tools require `d`. `QDRANT_READ_ONLY=true` is a
+global override that disables every write/delete tool.
 
 ## Environment Variables
 
@@ -83,10 +86,11 @@ The configuration of the server is done using environment variables:
 |---------------------------------------|---------------------------------------------------------------------|-------------------------------------------------------------------|
 | `QDRANT_URL`                          | URL of the Qdrant server                                            | None                                                              |
 | `QDRANT_API_KEY`                      | API key for the Qdrant server                                       | None                                                              |
-| `COLLECTION_NAME`                     | Name of the default collection to use.                              | None                                                              |
+| `COLLECTION_NAME`                     | Served collection(s). A single name, or a whitespace-separated list of `name[:perms]` access directives — see [Collection access control](#collection-access-control). | None                        |
+| `MCP_PASSWORD`                        | Shared-secret gate. When set, clients must send `Authorization: Bearer <MCP_PASSWORD>` — see [Password protection](#password-protection). | None (open)                          |
 | `QDRANT_LOCAL_PATH`                   | Path to the local Qdrant database (alternative to `QDRANT_URL`)     | None                                                              |
-| `QDRANT_READ_ONLY`                    | Enable read-only mode (disables store, update, and delete tools)    | `false`                                                           |
-| `QDRANT_ALLOW_ARBITRARY_FILTER`       | Allow arbitrary filter conditions in queries                        | `false`                                                           |
+| `QDRANT_READ_ONLY`                    | Global read-only override (strips write & delete from every collection) | `false`                                                      |
+| `QDRANT_ALLOW_ARBITRARY_FILTER`       | Allow arbitrary filter conditions in queries                        | `false`                                                          |
 | `EMBEDDING_PROVIDER`                  | Embedding provider to use (currently only "fastembed" is supported) | `fastembed`                                                       |
 | `EMBEDDING_MODEL`                     | Name of the embedding model to use                                  | `sentence-transformers/all-MiniLM-L6-v2`                          |
 | `TOOL_STORE_DESCRIPTION`              | Custom description for the store tool                               | See default in [`settings.py`](src/mcp_server_qdrant/settings.py) |
@@ -99,6 +103,74 @@ Note: You cannot provide both `QDRANT_URL` and `QDRANT_LOCAL_PATH` at the same t
 
 > [!IMPORTANT]
 > Command-line arguments are not supported anymore! Please use environment variables for all configuration.
+
+### Collection access control
+
+`COLLECTION_NAME` doubles as an access-control whitelist. It accepts a
+whitespace-separated list of directives, each `name[:perms]`, where `perms` is any
+combination of:
+
+| Letter | Permission | Tools it enables                       |
+|--------|------------|----------------------------------------|
+| `r`    | read       | `qdrant-find`                          |
+| `w`    | write      | `qdrant-store`, `qdrant-update`        |
+| `d`    | delete     | `qdrant-delete`, `qdrant-delete-by-filter` |
+
+Rules:
+
+- A directive **without** a `:perms` suffix defaults to full access (`rwd`).
+- Any other letter is ignored, so `:ro` reads as read-only (`r`).
+- `QDRANT_READ_ONLY=true` is a global override that strips `w` and `d` from every collection.
+- A **single** collection keeps the classic behaviour: it becomes the default and the
+  `collection_name` tool argument is hidden. With **multiple** collections the argument
+  is required and validated against the whitelist.
+
+A tool is only **exposed** when at least one served collection grants its permission
+(e.g. if every collection is `:ro`, only `qdrant-find` is registered). Each tool call is
+also **enforced** per-collection, and every tool description lists the accessible
+collections and their permissions.
+
+```shell
+COLLECTION_NAME="travel:ro place:rw pin:rwd"
+```
+
+On startup the server prints exactly what it serves:
+
+```
+[mcp-server-qdrant] Auth: PASSWORD REQUIRED (Authorization: Bearer <MCP_PASSWORD>)
+[mcp-server-qdrant] Serving 3 collection(s):
+[mcp-server-qdrant]   travel  r--  (read)
+[mcp-server-qdrant]   place   rw-  (read, write)
+[mcp-server-qdrant]   pin     rwd  (read, write, delete)
+[mcp-server-qdrant] Exposed tools: qdrant-find, qdrant-store, qdrant-update, qdrant-delete
+```
+
+### Password protection
+
+Set `MCP_PASSWORD` to require a shared secret on the MCP endpoint (HTTP transports).
+When set, clients must present the password as a bearer token:
+
+```
+Authorization: Bearer <MCP_PASSWORD>
+```
+
+Unauthenticated requests are rejected with `401` **before** `tools/list`, so the tool
+list and their descriptions cannot be read without the password. The `/health` endpoint
+stays public so container/serverless health checks keep working. When `MCP_PASSWORD` is
+empty/unset the server is open (no authentication).
+
+Example MCP client config with the password header:
+
+```json
+{
+  "mcpServers": {
+    "qdrant": {
+      "url": "https://your-server.example.com/mcp",
+      "headers": { "Authorization": "Bearer your-mcp-password" }
+    }
+  }
+}
+```
 
 ### FastMCP Environment Variables
 
